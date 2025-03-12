@@ -18,7 +18,8 @@ function KernDDMD(NPLib::Function, inds, kest, ic::String;
         tol = 0.7,
         num_batches1 = 10 ,
         num_batches2 = 1000 ,
-        maxiters = 500
+        maxiters = 500,
+        trainpct=80
     )
 
     # define library as function of unknown parameter (df)
@@ -29,7 +30,7 @@ function KernDDMD(NPLib::Function, inds, kest, ic::String;
     qt = reshape(kest[:], (length(kest[:]),1))
     function PE_NP_Loss(α, p)
         θ = PE_NP_Lib(α)
-        Ξ, _   = EnAdSR(θ, qt, ic, c=c, tol=tol, num_batches=num_batches1)
+        Ξ, _   = EnAdSR(θ, qt, ic, c=c, tol=tol, num_batches=num_batches1, trainpct=trainpct)
 
         return sum(abs2, qt - θ*Ξ)
     end
@@ -43,7 +44,7 @@ function KernDDMD(NPLib::Function, inds, kest, ic::String;
 
     # final round of DDMD
     θkern = NPLib(inds, df=optsoln[1]) 
-    Ξes, _,  ips = EnAdSR(θkern, qt, ic, num_batches=num_batches2, tol=tol, c=c)
+    Ξes, _,  ips = EnAdSR(θkern, qt, ic, num_batches=num_batches2, tol=tol, c=c, trainpct=trainpct)
 
     return optsoln[1] , Ξes , ips
 end

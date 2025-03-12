@@ -11,7 +11,7 @@ using LinearAlgebra , StatsBase
 # min_score = min IC score
 
 function AdSR(θ, y, ic::String; iter = 10, c=0., trainpct=80, abstol=1e-7, reltol = 1e-7)
-    @assert ic == "slic" || ic == "aicc" || ic == "bic"
+    #@assert ic == "slic" || ic == "aicc" || ic == "bic"
 
     # random train-val split 
     nobs , n_state = size(y)
@@ -23,6 +23,7 @@ function AdSR(θ, y, ic::String; iter = 10, c=0., trainpct=80, abstol=1e-7, relt
 
     # define information criterion scoring procedure 
     η = c*cond(θ_train) # this is optional enforcement to prevent log(RSS) -> ∞ , SLIC does well without it!
+    #=
     function score(Ξ, ic)
         nobs_test = size(y_test,1) # number of observations in test/val 
         k = count(abs.(Ξ) .> 0.) + 1 # number of free params
@@ -37,6 +38,7 @@ function AdSR(θ, y, ic::String; iter = 10, c=0., trainpct=80, abstol=1e-7, relt
             throw("Please enter valid selection criterion => slic, aicc, bic")
         end
     end
+    =# 
     # Initialize comparison values
     min_score = Inf
     prev_smallinds = [1]
@@ -44,7 +46,7 @@ function AdSR(θ, y, ic::String; iter = 10, c=0., trainpct=80, abstol=1e-7, relt
     # Get an initial estimate of the selection matrix Ξes
     Ξes = θ_train \ y_train    
     X_prev = θ_train * Ξes 
-
+    #min_score = score(y_test, θ_test, Ξes, ic, η)
     for i=1:iter
         
         # auto-gen thresholds 
@@ -77,7 +79,7 @@ function AdSR(θ, y, ic::String; iter = 10, c=0., trainpct=80, abstol=1e-7, relt
             prev_smallinds = smallinds
 
             # calculate the loss and compare it to our best loss
-            score_iter = score(temp_Ξes, ic)
+            score_iter = score(y_test, θ_test, temp_Ξes, ic, η)
             if score_iter < min_score
                 Ξes = copy(temp_Ξes)
                 min_score = score_iter
@@ -115,7 +117,9 @@ function EnAdSR(θ, y, ic::String;
         tol = 0.7
     )
     # hold ensemble of models  
-    ΞB = zeros((size(θ\y)..., num_batches))
+    #ΞB = zeros((size(θ\y)..., num_batches))
+    ΞB = zeros((size(θ,2), size(y,2), num_batches))
+
     scores = zeros(num_batches)
     # determine number of sample size
     N = size(y,1)
@@ -148,3 +152,38 @@ function EnAdSR(θ, y, ic::String;
     return Ξes, scores, ips[:,:,1]
 end
 
+function score(y, θ, Ξ, ic, η)
+    n = size(y,1) # number of observations in test/val 
+    k = count(abs.(Ξ) .> 0.) + 1 # number of free params
+    RSS = sum(abs2, y - θ*Ξ) + η
+    if ic=="slic"
+        n*log(k*RSS/n)
+    elseif ic=="aic"
+        n*log(RSS/n) + 2*k
+    elseif ic=="aicc"
+        n*log(RSS/n) + 2*k*n/(n-k-1)
+    elseif ic=="bic"
+        n*log(RSS/n) + k*log(n)
+    elseif ic=="hqic"
+        n*log(RSS/n) + k*log(log(n))
+    elseif ic=="bc"
+        n*log(RSS/n) + n^(1/3) * sum(1/i for i=1:k)
+    elseif ic=="Cp"
+        RSS*(1+2*k/n)
+    elseif ic=="kic"
+        kic = 0
+        biginds = abs.(Ξ) .> 0
+        if size(y,2) > 1
+            for ind=1:size(y,2)
+                biginds_i = biginds[:,ind]
+                kic +=  log(abs(det((RSS/n)^-1 * θ[:,biginds_i]'*θ[:,biginds_i])))
+            end
+        else
+            kic +=   log(abs(det((RSS/n)^-1 * θ[:,vec(biginds)]'*θ[:,vec(biginds)])))
+        end
+        kic += n*log(RSS/n) - k*log(2*π) 
+        return kic 
+    else
+        throw("Please enter valid selection criterion => slic, aic, aicc, bic, hqic, bc, Cp, kic")
+    end
+end

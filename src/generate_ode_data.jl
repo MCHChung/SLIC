@@ -49,7 +49,7 @@ function GenData(sys::Int, tspan, dt, u0::Vector, ps::Vector; algo=Tsit5())
     elseif sys==4 # Brus
         @assert length(ps) == 2 && length(u0) == 2 
         # define derivative 
-        function brust!(du, u, p, t)
+        function brus!(du, u, p, t)
             a,b = p[1], p[2]
             du[1] = 1. + a*u[1] + b*u[1]^2*u[2]
             du[2] = (-a-1)*u[1] - b*u[1]^2*u[2] 
@@ -83,4 +83,24 @@ function GenData(sys::Int, tspan, dt, u0::Vector, ps::Vector; algo=Tsit5())
         soln = solve(prob, algo , saveat=dt)
         return Array(soln), soln.t
     end
+end
+
+function  GenData(sys::Int, tspan, dt, u0::Vector; algo=Tsit5())
+    ps = begin
+        if sys==1
+            [10., 28., 8/3]
+        elseif sys==2
+            [0.2, 0.5, 5.7]
+        elseif sys==3
+            [0.05]
+        elseif sys==4 
+            [-4., 1]
+        elseif sys==5
+            [0.8]
+        elseif sys==6
+            [2.]
+        end
+    end
+
+    return GenData(sys, tspan, dt, u0, ps; algo=algo)
 end
