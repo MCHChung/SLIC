@@ -3,7 +3,7 @@ using DrWatson
 using JLD
 
 # functions to extract models and visualize results
-include(srcdir("spider_2.jl"))
+include(srcdir("spider.jl"))
 include(srcdir("sparse_regress.jl"))
 include(srcdir("derivative.jl"))
 include(srcdir("galerkin_proj.jl"))
@@ -1688,3 +1688,4 @@ nlp_results_si = Dict(
 
 println("Saving data for sys #$(sys)")
 wsave(datadir("sims", "ode_results_si", "nlp_results_spider_si.jld2"), nlp_results_si)
+
