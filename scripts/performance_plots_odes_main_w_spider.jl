@@ -19,12 +19,12 @@ vdpdata = load(datadir("sims", "ode_results_main", "vdp_results_main.jld"))
 nlpdata = load(datadir("sims", "ode_results_main", "nlp_results_main.jld"))
 
 # spider stuff
-lordata_sp = load(datadir("sims", "ode_results_si", "lor_spider_2_results_si.jld"))
-rossdata_sp = load(datadir("sims", "ode_results_si", "ross_spider_2_results_si.jld"))
-lvdata_sp = load(datadir("sims", "ode_results_si", "lv_spider_2_results_si.jld"))
-brusdata_sp = load(datadir("sims", "ode_results_si", "brus_spider_2_results_si.jld"))
-vdpdata_sp = load(datadir("sims", "ode_results_si", "vdp_spider_2_results_si.jld"))
-nlpdata_sp = load(datadir("sims", "ode_results_si", "nlp_spider_2_results_si.jld"))
+lordata_sp = load(datadir("sims", "ode_results_main", "lor_spider_results_main.jld"))
+rossdata_sp = load(datadir("sims", "ode_results_main", "ross_spider_results_main.jld"))
+lvdata_sp = load(datadir("sims", "ode_results_main", "lv_spider_results_main.jld"))
+brusdata_sp = load(datadir("sims", "ode_results_main", "brus_spider_results_main.jld"))
+vdpdata_sp = load(datadir("sims", "ode_results_main", "vdp_spider_results_main.jld"))
+nlpdata_sp = load(datadir("sims", "ode_results_main", "nlp_spider_results_main.jld"))
 
 lordata["Ξsp"] = lordata_sp["Ξsp_sc"]
 rossdata["Ξsp"] = rossdata_sp["Ξsp_sc"]
@@ -77,3 +77,4 @@ display(p_acc)
 display(p_fpr)
 display(p_err)
 display(p_leg)
+
