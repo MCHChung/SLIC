@@ -3,7 +3,7 @@ using DrWatson, JLD, StatsBase
 using JLD
 
 # functions to extract models and visualize results
-include(srcdir("spider_2.jl"))
+include(srcdir("spider.jl"))
 include(srcdir("derivative.jl"))
 include(srcdir("galerkin_proj.jl"))
 include(srcdir("smooth.jl"))
@@ -602,4 +602,5 @@ wsave(datadir("sims", "ode_results_main", "lv_spider_results_main.jld"), lvdata)
 wsave(datadir("sims", "ode_results_main", "brus_spider_results_main.jld"), brusdata)
 wsave(datadir("sims", "ode_results_main", "vdp_spider_results_main.jld"), vdpdata)
 wsave(datadir("sims", "ode_results_main", "nlp_spider_results_main.jld"), nlpdata)
+
 =#  
