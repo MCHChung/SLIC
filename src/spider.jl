@@ -1,7 +1,5 @@
 using LinearAlgebra
 
-using LinearAlgebra
-
 """
     SparseReg(Theta, char_sizes, valid_single, opts)
 
