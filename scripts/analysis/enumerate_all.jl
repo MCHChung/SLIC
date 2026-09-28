@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "SLIC"
 using JLD, Random, Statistics, LinearAlgebra
 
-include(scriptsdir("rev", "rev_common.jl"))
+include(scriptsdir("analysis", "common.jl"))
 
 # ----------------------------------------------------------------------------
 # Note on the residual floor eta (applies identically to every criterion,
@@ -19,25 +19,22 @@ include(scriptsdir("rev", "rev_common.jl"))
 
 
 # ============================================================================
-# Unified exhaustive-enumeration script for all 6 systems (R2 §5).
+# Exhaustive enumeration of candidate supports (Supplementary Fig. S12).
 #
-# Task encoding (via SLURM_ARRAY_TASK_ID):
-#   Each task = (sys, noise_idx, eq_idx).
-#   Total tasks per system: 6 noise levels × n_state equations.
+# The system is chosen with SLIC_ENUM_SYS; SLURM_ARRAY_TASK_ID selects the
+# noise level and equation, task = (noise_idx-1)*n_state + (eq_idx-1), so there
+# are 6 noise levels × n_state equations = 6*n_state tasks per system.
 #
 # max_k cap is per-system: full enumeration where tractable, max_k=8 for
-# Lorenz/Rossler (true supports ≤3 per equation, so >=8 is rhetorically
-# 'essentially exhaustive').
-#
-# This file is called by submit_enumerate_all.sh; a separate task array
-# encodes which system to run.
+# Lorenz/Rossler (true supports ≤3 per equation, so max_k=8 is effectively
+# exhaustive).
 # ============================================================================
 
 const NOISE_ENUM = [0, 5, 10, 20, 30, 40]
 const RUNS_ENUM = 25
 const ICS_ENUM = ["slic", "aic", "aicc", "bic", "hqic", "bc", "kic"]
 # Per-system conditioning weight, matching discover_model_ode_main.jl call sites.
-# Spans four orders of magnitude; must match per system, not a flat 1e-2.
+# Spans four orders of magnitude, so it is set per system.
 #   Lorenz=1e-1, Rossler=1e-1, LV=1e-3, Brusselator=1e-2, VdP=1e0, NLP=1e-2
 const C_VALS = Dict(1 => 1e-1, 2 => 1e-1, 3 => 1e-3, 4 => 1e-2, 5 => 1e0, 6 => 1e-2)
 # Sensitivity knob: multiply all c values by SLIC_C_SCALE (default 1.0). Lets us
@@ -46,23 +43,23 @@ const C_VALS = Dict(1 => 1e-1, 2 => 1e-1, 3 => 1e-3, 4 => 1e-2, 5 => 1e0, 6 => 1
 const C_SCALE = haskey(ENV, "SLIC_C_SCALE") ? parse(Float64, ENV["SLIC_C_SCALE"]) : 1.0
 # Absolute override: if SLIC_C_ABS is set, it REPLACES C_VALS[sys] entirely
 # (C_SCALE is then ignored). Used to run the noise sweep at the value calibrated
-# on noise-free data by scripts/rev/calibrate_c.jl.
+# on noise-free data by scripts/analysis/calibrate_c.jl.
 const C_ABS = haskey(ENV, "SLIC_C_ABS") ? parse(Float64, ENV["SLIC_C_ABS"]) : nothing
 c_for(sys) = C_ABS === nothing ? C_SCALE * C_VALS[sys] : C_ABS
 
 # Dimensionless per-equation floor: if SLIC_GAMMA is set, use
 #     η_eq = γ · RSS⁽⁰⁾_eq
 # where RSS⁽⁰⁾ is the noise-free residual of the true model for that equation,
-# read from the calibration written by scripts/rev/calibrate_c.jl. This makes
+# read from the calibration written by scripts/analysis/calibrate_c.jl. This makes
 # the floor scale with each equation's own systematic error rather than sharing
 # one absolute value across equations whose residuals differ by orders of
 # magnitude. cond(θ) plays no role in this mode.
 const GAMMA = haskey(ENV, "SLIC_GAMMA") ? parse(Float64, ENV["SLIC_GAMMA"]) : nothing
 
 function rss0_for(sysname_safe::String)
-    p = datadir("sims", "ode_results_rev", "c_calibration", "$(sysname_safe)_ccal.jld")
+    p = datadir("sims", "ode_results", "c_calibration", "$(sysname_safe)_ccal.jld")
     isfile(p) || error("SLIC_GAMMA set but calibration missing: $p\n" *
-                       "Run: sbatch --array=0-5 cluster/submit_calibrate_c.sh")
+                       "Run scripts/analysis/calibrate_c.jl first (SLIC_CAL_SYS=1-6).")
     return load(p)["rss_true"]
 end
 
@@ -72,8 +69,8 @@ const SYS_MAX_K = Dict(
     2 => 8,         # Rossler: 20-term library, cap at 8 (saves ~4×)
     3 => nothing,   # LV: 9-term library, full enumeration trivial
     4 => nothing,   # Brusselator: 10-term library, full enumeration trivial
-    5 => nothing,   # VdP: already done; included for re-run
-    6 => nothing,   # Pendulum: already done; included for re-run
+    5 => nothing,   # VdP: full enumeration
+    6 => nothing,   # Pendulum: full enumeration
 )
 
 function main(sys::Int, noise_idx::Int, eq_idx::Int)
@@ -139,7 +136,7 @@ function main(sys::Int, noise_idx::Int, eq_idx::Int)
     cscale_tag = GAMMA !== nothing ? "_g" * string(GAMMA) :
                  C_ABS !== nothing ? "_ccal" :
                  (C_SCALE == 1.0 ? "" : "_cx" * string(C_SCALE))
-    outdir = datadir("sims", "ode_results_rev", "enumeration" * cscale_tag, sysname_safe)
+    outdir = datadir("sims", "ode_results", "enumeration" * cscale_tag, sysname_safe)
     mkpath(outdir)
     outfile = joinpath(outdir, "$(sysname_safe)_enum_noise$(noise_idx)_eq$(eq_idx).jld")
 
@@ -162,7 +159,7 @@ end
 # ============================================================================
 # Entry: select task via env var SLIC_ENUM_SYS, SLURM_ARRAY_TASK_ID
 #
-# Caller (sbatch script) sets SLIC_ENUM_SYS=<sys_id>, and SLURM_ARRAY_TASK_ID
+# The caller sets SLIC_ENUM_SYS=<sys_id>, and SLURM_ARRAY_TASK_ID
 # encodes (noise_idx-1)*n_state + (eq_idx-1).
 # ============================================================================
 

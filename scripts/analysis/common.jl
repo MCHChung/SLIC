@@ -3,20 +3,20 @@ using DrWatson
 using JLD, Random, Statistics
 
 # ============================================================================
-# Common helpers for revision scripts. Pulls in modified pipeline pieces.
+# Common helpers for the analysis scripts. Pulls in the pipeline pieces.
 # ============================================================================
 
-include(srcdir("sparse_regress.jl"))    # MODIFIED with n_eff, WAIC, NML
+include(srcdir("sparse_regress.jl"))    # with n_eff support and WAIC/NML hooks
 include(srcdir("derivative.jl"))
 include(srcdir("galerkin_proj.jl"))
 include(srcdir("smooth.jl"))
 include(srcdir("vis_results.jl"))
-include(srcdir("neff.jl"))               # NEW
-include(srcdir("enumeration.jl"))        # NEW
-include(srcdir("no_projection.jl"))      # NEW
+include(srcdir("neff.jl"))
+include(srcdir("enumeration.jl"))
+include(srcdir("no_projection.jl"))
 
 # ----------------------------------------------------------------------------
-# System metadata used across rev scripts
+# System metadata used across the analysis scripts
 # ----------------------------------------------------------------------------
 
 const SYSTEMS = Dict(
@@ -109,7 +109,7 @@ function NLPLib(X, ts, wind; p=10, Δ=1)
     return θ
 end
 
-# Duffing library (REVISION: R2 §4): same structure as VdP but tracks cubic
+# Duffing library: same structure as VdP but tracks cubic
 function DuffLib(X, ts, wind; p=10, Δ=1)
     θ = wInt_sc(X[1,:], ts, wind, p=p,Δ=Δ)
     for i=2:size(X,1)
@@ -200,11 +200,9 @@ function GetInputsWithNeff(sys::Int, Xs, ts, Lib::Function, NoisePct; p=10)
         return qt, θ, n_eff_traj
 
     elseif sys==6
-        # FIX: previously qt was reshaped to (n_obs, 1), which made the
-        # uniform `qt'` in the experiment scripts produce (1, n_obs) — wrong
-        # orientation for EnAdSR, causing cond(θ_train) to fail on an empty
-        # matrix when 80% of "1 observation" was sampled.
-        # Now qt is (1, n_obs), matching sys=1-5 convention.
+        # qt is (1, n_obs), matching the sys=1-5 convention, so that the
+        # uniform `qt'` in the experiment scripts gives the (n_obs, 1)
+        # orientation EnAdSR expects.
         xtrue = Xs[1][1,:]
         η = NoisePct*std(xtrue)/100
         xn = xtrue + η.*randn(size(xtrue))

@@ -16,7 +16,7 @@ using Statistics, LinearAlgebra
 #                              (τ_eff = 1 + 2 Σ ρ(ℓ) from residual autocorrelation,
 #                              with Sokal's automatic windowing rule for cutoff)
 #
-# See SI subsection (added in revision) for derivation of (2).
+# See the Supplementary Information for the derivation of (2).
 # ============================================================================
 
 """

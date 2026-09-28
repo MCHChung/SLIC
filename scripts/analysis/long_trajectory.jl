@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "SLIC"
 using JLD, Random, Statistics
 
-include(scriptsdir("rev", "rev_common.jl"))
+include(scriptsdir("analysis", "common.jl"))
 
 # ----------------------------------------------------------------------------
 # Note on the residual floor eta (applies identically to every criterion,
@@ -17,17 +17,16 @@ include(scriptsdir("rev", "rev_common.jl"))
 # not sparsify at low noise.
 # ----------------------------------------------------------------------------
 
-include(scriptsdir("rev", "sparse_regress_probe.jl"))  # score_on_all override
+include(scriptsdir("analysis", "sparse_regress_probe.jl"))  # score_on_all override
 include(srcdir("generate_ode_data.jl"))
 
 # ============================================================================
-# Long-trajectory scaling experiment (R2 §3 headline), v2.
+# Long-trajectory scaling experiment.
 #
-# Changes vs v1:
-#   - Extended L grid: {1, 2, 5, 10, 20, 50} (was {1,2,5,10,20})
+#   - L grid: {1, 2, 5, 10, 20, 50}
 #   - Position-1 scoring (fit_uses_neff=true): competitors get n_eff in BOTH
 #     the fit-term leading coefficient and the penalty (coherent correction).
-#     SLIC unchanged (invariant).
+#     SLIC is invariant to this.
 #   - Design matches on L (physical trajectory-length multiplier), NOT on a
 #     target n_eff. n_eff is reported as a measured outcome for the x-axis.
 #
@@ -95,7 +94,7 @@ function main(sys::Int, L_idx::Int)
     rng = Random.default_rng()
     Random.seed!(rng, 2500 + sys * 100 + L_idx)
 
-    println("=== long_trajectory v2: $sysname, L=$L (length $(L*Tdefault)s), Position 1 ===")
+    println("=== long_trajectory: $sysname, L=$L (length $(L*Tdefault)s), Position 1 ===")
     flush(stdout)
 
     results_per_noise = Dict{Int, Any}()
@@ -122,7 +121,7 @@ function main(sys::Int, L_idx::Int)
         results_per_noise[NoisePct] = Dict("Xis" => Ξs_run, "n_eff" => n_eff_run)
     end
 
-    outdir = datadir("sims", "ode_results_rev", "long_trajectory_neffall_all_v2")
+    outdir = datadir("sims", "ode_results", "long_trajectory_neffall")
     mkpath(outdir)
     outfile = joinpath(outdir, "$(lowercase(replace(sysname, " " => "_")))_L$(L)_results.jld")
 
@@ -146,7 +145,7 @@ sys, L_idx = if haskey(ENV, "SLURM_ARRAY_TASK_ID")
 elseif length(ARGS) >= 2
     parse(Int, ARGS[1]), parse(Int, ARGS[2])
 else
-    error("Usage: julia long_trajectory_v2.jl SYS L_IDX  (or SLURM_ARRAY_TASK_ID ∈ [0,11])")
+    error("Usage: julia long_trajectory.jl SYS L_IDX  (or SLURM_ARRAY_TASK_ID ∈ [0,35])")
 end
 
 main(sys, L_idx)

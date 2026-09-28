@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "SLIC"
 using JLD, Random, Statistics, LinearAlgebra
 
-include(scriptsdir("rev", "rev_common.jl"))
+include(scriptsdir("analysis", "common.jl"))
 
 # ----------------------------------------------------------------------------
 # Note on the residual floor eta (applies identically to every criterion,
@@ -17,41 +17,31 @@ include(scriptsdir("rev", "rev_common.jl"))
 # not sparsify at low noise.
 # ----------------------------------------------------------------------------
 
-include(scriptsdir("rev", "sparse_regress_probe.jl"))   # score_on_all override
+include(scriptsdir("analysis", "sparse_regress_probe.jl"))   # score_on_all override
 include(srcdir("generate_ode_data.jl"))
 
 # ============================================================================
-# DUFFING WEAK-CUBIC SWEEP, RE-RUN WITH A FIXED INITIAL CONDITION
-# (Reviewer 2, section 4)
+# DUFFING WEAK-CUBIC SWEEP WITH A FIXED INITIAL CONDITION
 #
-# WHY THIS IS BEING RE-RUN. In the first version of this sweep the initial
-# condition was redrawn for every value of alpha. Because the cubic term's
-# share of the restoring force scales as alpha * A^2 with A the trajectory
-# amplitude, varying the amplitude between runs confounds the very quantity
-# being swept. The symptom is unmistakable in the stored results: the measured
-# cubic contribution is NOT monotonic in alpha,
+# WHY THE INITIAL CONDITION IS FIXED. The cubic term's share of the restoring
+# force scales as alpha * A^2 with A the trajectory amplitude. If the initial
+# condition were redrawn for every alpha, the amplitude would vary between runs
+# and confound the very quantity being swept: the measured cubic contribution
+# need not be monotonic in alpha, and individual alphas could draw unusually
+# clean or unusually hard trajectories, neither of which is a property of alpha.
 #
-#       alpha = 0.02  ->  0.60 % of variance
-#       alpha = 0.05  ->  0.29 %      (falls, while alpha rises)
-#       alpha = 0.10  ->  1.55 %
-#
-# which requires the amplitude to have changed by roughly a factor 2.3 between
-# the first two runs. Two alpha values (0.1 and 2.0) also happened to draw
-# unusually clean trajectories, and every criterion returns exactly the true
-# four terms there while neighbouring alphas give five to twelve. Neither
-# effect is a property of alpha.
-#
-# THE FIX. u0 is fixed at U0_FIXED for every alpha, and every alpha uses the
+# u0 is therefore fixed at U0_FIXED for every alpha, and every alpha uses the
 # same noise seeds, so alpha is the only quantity that varies across the sweep.
 # The measured cubic ratio is then monotonic by construction and the panels can
-# be plotted against it honestly.
+# be plotted against it.
 #
 # The Duffing system is
 #       xddot = -delta*xdot - omega^2*x - alpha*x^3
 # with delta = 0.1 and omega = 1 held fixed (system 7 in generate_ode_data.jl,
 # ps = [delta, omega, alpha]).
 #
-#   sbatch --array=0-8 cluster/submit_duffing_fixed.sh
+# One task per alpha (SLURM_ARRAY_TASK_ID 0-8, or the alpha index 1-9 as argument):
+#   alpha = 0.0, 0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 1.0, 2.0
 # ============================================================================
 
 const SYS_D     = 7
@@ -135,7 +125,7 @@ function run_alpha(alpha::Float64)
         println("  noise $NoisePct% done"); flush(stdout)
     end
 
-    outdir = datadir("sims", "ode_results_rev", "duffing_fixed_u0")
+    outdir = datadir("sims", "ode_results", "duffing_fixed_u0")
     mkpath(outdir)
     outfile = joinpath(outdir, "duffing_alpha$(alpha)_fixedu0.jld")
     wsave(outfile, Dict{String,Any}(

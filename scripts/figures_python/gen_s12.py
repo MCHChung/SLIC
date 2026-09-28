@@ -1,7 +1,7 @@
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from paths import RESULTS, PLOTS
 _R, _P = str(RESULTS), str(PLOTS)
-"""SI enumeration figure (R2 section 5): exhaustive support enumeration on a
+"""SI enumeration figure (Supp. Fig. S12): exhaustive support enumeration on a
 FIXED candidate set, each criterion ranking the same supports. Removes the
 candidate-generation loop confound entirely."""
 import h5py, glob, numpy as np, re

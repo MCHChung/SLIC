@@ -1,7 +1,7 @@
 using LinearAlgebra, Random
 
 # ============================================================================
-# WAIC and gMDL for Gaussian linear regression, rewritten to be scored on the
+# WAIC and gMDL for Gaussian linear regression, scored on the
 # SAME footing as the classical criteria in src/sparse_regress.jl:score.
 #
 # Reference (score, src/sparse_regress.jl:129):
@@ -12,29 +12,25 @@ using LinearAlgebra, Random
 #     RSS   = sum(abs2, y - θ*Ξ) + η
 #     bic   = n_fit*log(RSS/n) + k*log(n_pen)          # etc.
 #
-# Four mismatches in the previous implementations, all fixed here:
+# Four points of agreement with score:
 #
-#  1. UNION SUPPORT + REFIT (the serious one).  Both used
+#  1. SCORE THE ACTUAL SPARSE Ξ, NO REFIT. Refitting every equation on the
+#     UNION of supports across equations,
 #         biginds = vec(any(abs.(Ξ) .> 0, dims=2))
-#     i.e. the UNION of supports across equations, then refit EVERY equation on
-#     ALL union columns. For Lorenz's true Ξ (7 nonzeros, 5 union columns) that
-#     scores a 15-parameter model, not the 7-parameter one proposed. Worse, a
-#     column added to ANY ONE equation becomes available to ALL equations on
-#     refit, so the fit improves far more than the proposal warrants — a direct
-#     reward for growing the union, and a plausible mechanism for the observed
-#     FPR ~ 1. `score` instead evaluates the residual of the ACTUAL sparse Ξ.
-#     Fixed: residual is y - θ*Ξ, no refit, sparsity pattern respected.
+#     would, for Lorenz's true Ξ (7 nonzeros, 5 union columns), score a
+#     15-parameter model rather than the 7-parameter one proposed. Worse, a
+#     column added to ANY ONE equation would become available to ALL equations
+#     on refit, so the fit would improve far more than the proposal warrants —
+#     a direct reward for growing the union, which drives FPR towards 1.
+#     Here the residual is y - θ*Ξ, with no refit and the sparsity pattern
+#     respected, as in `score`.
 #
-#  2. n_eff IGNORED.  Both accepted n_eff and never used it (bodies ran on
-#     n_obs = size(X,1) throughout), so every n_eff-corrected WAIC/gMDL result
-#     was a raw-n result. Fixed: n_fit / n_pen convention, matching score.
+#  2. n_eff. The n_fit / n_pen convention of score is used.
 #
-#  3. η NEVER APPLIED.  Both discarded the passed RSS (which carries + η) by
-#     refitting. The five classical criteria all receive the floor. Fixed: the
-#     passed, floored RSS is used.
+#  3. η. The passed, floored RSS (which carries + η) is used, so WAIC and gMDL
+#     receive the same floor as the five classical criteria.
 #
-#  4. k CONVENTION.  gMDL charged itself k_act = union columns while the others
-#     are charged count(nonzeros)+1. Fixed for gMDL.
+#  4. k CONVENTION. gMDL is charged count(nonzeros)+1, like the others.
 #     WAIC keeps pWAIC as its complexity term — pWAIC IS WAIC's own effective-
 #     parameter estimate, and replacing it with count+1 would not be WAIC.
 #
@@ -146,9 +142,8 @@ sparse Ξ with the caller's floored RSS.
          = (n_fit/2) log(y'y/n) + (1/2) log(n_pen)        otherwise
 
 Paper p.153: the code cost of the hyperparameters is log n in the upper branch
-and (1/2) log n in the lower — the previous implementation used 0.5*log n in
-both. (That constant is independent of k, so it cancels between two F>1 models
-and changed no rankings in testing; corrected here for fidelity.)
+and (1/2) log n in the lower. (That constant is independent of k, so it
+cancels between two F>1 models.)
 
 Lower is better. `RSS` and `k` are the caller's (do NOT recompute them).
 """

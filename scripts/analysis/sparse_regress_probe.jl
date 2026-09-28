@@ -1,7 +1,7 @@
 # ============================================================================
 # OVERRIDE for the score_on_all probe. Redefines ONLY AdSR and EnAdSR.
 #
-# include AFTER rev_common.jl; Julia takes the last definition, so this shadows
+# include AFTER common.jl; Julia takes the last definition, so this shadows
 # the versions from src/sparse_regress.jl WITHOUT modifying that file. Method
 # overwrite warnings on load are expected and harmless.
 #
@@ -35,7 +35,7 @@ function AdSR(θ, y, ic::String; iter=10, c=0., trainpct=80, abstol=1e-7, reltol
 
     η = c*cond(θ_train)
 
-    # Scoring target. Default (score_on_all=false) preserves the published
+    # Scoring target. Default (score_on_all=false) is the standard pipeline
     # behaviour: fit on train, score on the held-out rows, with n_eff scaled to
     # that split.
     #

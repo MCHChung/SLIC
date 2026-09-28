@@ -40,6 +40,6 @@ n_eff DEFINITION ROBUSTNESS  case 1: Lorenz, standard sampling
 READ: SLIC's row must be identical across all three definitions (it is
 invariant to n_eff by construction). If the competitors' rows are also
 stable, the conclusions do not depend on which n_eff definition is used,
-which is what the response letter claims. If they move, report the
+i.e. the conclusions are robust to it. If they move, report the
 headline under the definition and state the sensitivity.
   done Wed Aug  5 06:04:22 PM EDT 2026

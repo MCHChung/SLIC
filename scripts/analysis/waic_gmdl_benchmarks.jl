@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "SLIC"
 using JLD, Random, Statistics
 
-include(scriptsdir("rev", "rev_common.jl"))
+include(scriptsdir("analysis", "common.jl"))
 
 # ----------------------------------------------------------------------------
 # Note on the residual floor eta (applies identically to every criterion,
@@ -17,15 +17,12 @@ include(scriptsdir("rev", "rev_common.jl"))
 # not sparsify at low noise.
 # ----------------------------------------------------------------------------
 
-include(srcdir("waic_gmdl.jl"))   # corrected WAIC (exact sampling) + gMDL
+include(srcdir("waic_gmdl.jl"))   # WAIC (exact sampling) + gMDL
 
 # ============================================================================
-# Rerun benchmarks with CORRECTED WAIC and gMDL (R1 Concern 2).
-#
-# Supersedes rerun_with_waic_nml.jl. The earlier WAIC (Laplace) and NML
-# (broken closed form) are replaced by:
+# Benchmarks with WAIC and gMDL:
 #   - WAIC via exact conjugate-posterior sampling
-#   - gMDL (Hansen & Yu 2001), the correct closed-form MDL for Gaussian
+#   - gMDL (Hansen & Yu 2001), the closed-form MDL for Gaussian
 #     regression with unknown variance
 #
 # Because these two criteria are not in the score() switch by default, this
@@ -44,9 +41,9 @@ const RUNS_WG = 25
 const NUM_BATCHES_WG = 20
 const TOL_WG = 0.7
 const CC_WG  = 1e-2
-const NEW_ICS = ["waic", "gmdl"]
+const EXTRA_ICS = ["waic", "gmdl"]
 
-# Local score() extension: dispatches waic/gmdl to the corrected implementations,
+# Local score() extension: dispatches waic/gmdl to the waic_gmdl.jl implementations,
 # falls back to the standard score() for everything else.
 function score_ext(y, θ, Ξ, ic, η; n_eff=nothing)
     if ic == "waic"
@@ -77,7 +74,7 @@ function AdSR_ext(θ, y, ic::String; iter=10, c=0., trainpct=80, n_eff=nothing, 
     # score_on_all: fit on the train split (ensemble still varies across batches)
     # but score on ALL n, with η rescaled by nobs/n_test so the relative
     # conditioning floor η/RSS is preserved and the n effect is isolated.
-    # Mirrors scripts/rev/sparse_regress_probe.jl exactly.
+    # Mirrors scripts/analysis/sparse_regress_probe.jl exactly.
     θ_score = score_on_all ? θ : θ_test
     y_score = score_on_all ? y : y_test
     n_eff_score = if isnothing(n_eff)
@@ -148,11 +145,11 @@ function main(sys::Int, noise_idx::Int)
     Lib = LIBS[sys]
     data = load(datadir("sims", "ode_data", fname))
 
-    println("=== WAIC/gMDL (corrected) rerun: $sysname, noise=$NoisePct% ===")
+    println("=== WAIC/gMDL: $sysname, noise=$NoisePct% ===")
     flush(stdout)
 
-    Ξs_raw = Dict(ic => zeros(n_lib, n_state, RUNS_WG) for ic in NEW_ICS)
-    Ξs_eff = Dict(ic => zeros(n_lib, n_state, RUNS_WG) for ic in NEW_ICS)
+    Ξs_raw = Dict(ic => zeros(n_lib, n_state, RUNS_WG) for ic in EXTRA_ICS)
+    Ξs_eff = Dict(ic => zeros(n_lib, n_state, RUNS_WG) for ic in EXTRA_ICS)
     n_eff_run = zeros(RUNS_WG)
 
     Random.seed!(9000 + sys*100 + noise_idx)
@@ -161,7 +158,7 @@ function main(sys::Int, noise_idx::Int)
         println("  run $run/$RUNS_WG"); flush(stdout)
         qt, θ, n_eff_val = GetInputsWithNeff(sys, data["Xtrues"], data["ts"], Lib, NoisePct)
         n_eff_run[run] = n_eff_val
-        for ic in NEW_ICS
+        for ic in EXTRA_ICS
             Ξr = EnAdSR_ext(θ, qt', ic; tol=TOL_WG, c=CC_WG, num_batches=NUM_BATCHES_WG)
             Ξs_raw[ic][:, :, run] = Ξr
             Ξe = EnAdSR_ext(θ, qt', ic; tol=TOL_WG, c=CC_WG, num_batches=NUM_BATCHES_WG, n_eff=n_eff_val, score_on_all=true)
@@ -169,12 +166,12 @@ function main(sys::Int, noise_idx::Int)
         end
     end
 
-    outdir = datadir("sims", "ode_results_rev", "waic_gmdl_neffall")
+    outdir = datadir("sims", "ode_results", "waic_gmdl_neffall")
     mkpath(outdir)
     outfile = joinpath(outdir, "$(lowercase(replace(sysname, " " => "_")))_waic_gmdl_noise$(noise_idx).jld")
     out = Dict{String,Any}("sysname"=>sysname, "sys"=>sys, "NoisePct"=>NoisePct,
                             "Xitrue"=>data["Ξtrue"], "n_eff"=>n_eff_run)
-    for ic in NEW_ICS
+    for ic in EXTRA_ICS
         out["Xis_raw_$ic"] = Ξs_raw[ic]
         out["Xis_eff_$ic"] = Ξs_eff[ic]
     end
@@ -188,7 +185,7 @@ sys, noise_idx = if haskey(ENV, "SLURM_ARRAY_TASK_ID")
 elseif length(ARGS) >= 2
     parse(Int, ARGS[1]), parse(Int, ARGS[2])
 else
-    error("Usage: julia rerun_with_waic_gmdl.jl SYS NOISE_IDX  (or SLURM_ARRAY_TASK_ID ∈ [0,35])")
+    error("Usage: julia waic_gmdl_benchmarks.jl SYS NOISE_IDX  (or SLURM_ARRAY_TASK_ID ∈ [0,35])")
 end
 
 main(sys, noise_idx)

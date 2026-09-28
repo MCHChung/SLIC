@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "SLIC"
 using JLD, Random, Statistics, LinearAlgebra
 
-include(scriptsdir("rev", "rev_common.jl"))
+include(scriptsdir("analysis", "common.jl"))
 
 # ----------------------------------------------------------------------------
 # Note on the residual floor eta (applies identically to every criterion,
@@ -17,34 +17,30 @@ include(scriptsdir("rev", "rev_common.jl"))
 # not sparsify at low noise.
 # ----------------------------------------------------------------------------
 
-include(scriptsdir("rev", "sparse_regress_probe.jl"))  # score_on_all override; src/ untouched
+include(scriptsdir("analysis", "sparse_regress_probe.jl"))  # score_on_all override
 
 # ============================================================================
-# Fig. 3 recomputed with an effective sample size (Reviewer 2, §3).
+# Fig. 3 computed with an effective sample size for the competitors; SLIC's
+# penalty is left as is.
 #
-# The reviewer asks: "I would ask the authors to recompute Figs. 2 and 3 with
-# an effective sample size for the competitors. ... SLIC's penalty should be
-# left untouched."
-#
-# Fig. 2 was done in rerun_with_neff_v2.jl. This script does Fig. 3's four
-# panels:
+# This script does Fig. 3's four panels:
 #   ss  -> panel (c) subsampling         (dict_main, stride Δ ∈ SS_GRID)
 #   Ts  -> panel (b) trajectory length   (dict_T,  one entry per length)
 #   dts -> panel (a) sampling frequency  (dict_dt, one entry per dt)
 #   ps  -> panel (d) ODE parameters      (dict_ps, own Ξtrue per parameter set)
 #
-# Each condition is scored three ways, matching neff_v2:
-#   raw : n everywhere (as published)
+# Each condition is scored three ways:
+#   raw : n everywhere
 #   p1  : n_eff in BOTH the fit coefficient and the penalty  (coherent)
 #   p2  : n_eff in the penalty only
 # SLIC is invariant to all three by construction (n cancels in the comparison
 # n·log(k·RSS/n)); it is still scored under each as a control.
 #
 # Usage:
-#   SLIC_SI_COND=ss  sbatch --array=0-35 cluster/submit_si_neff.sh
-#   SLIC_SI_COND=Ts  sbatch --array=0-35 cluster/submit_si_neff.sh
-#   SLIC_SI_COND=dts sbatch --array=0-35 cluster/submit_si_neff.sh
-#   SLIC_SI_COND=ps  sbatch --array=0-23 cluster/submit_si_neff.sh   # sys ∈ [1,3,4,5]
+#   SLIC_SI_COND=ss  SLURM_ARRAY_TASK_ID=<0-35> julia --project=. scripts/analysis/fig3_perturbations.jl
+#   SLIC_SI_COND=Ts  SLURM_ARRAY_TASK_ID=<0-35> julia --project=. scripts/analysis/fig3_perturbations.jl
+#   SLIC_SI_COND=dts SLURM_ARRAY_TASK_ID=<0-35> julia --project=. scripts/analysis/fig3_perturbations.jl
+#   SLIC_SI_COND=ps  SLURM_ARRAY_TASK_ID=<0-23> julia --project=. scripts/analysis/fig3_perturbations.jl   # sys ∈ [1,3,4,5]
 # task = (sys_idx)*6 + noise_idx
 # ============================================================================
 
@@ -245,7 +241,7 @@ function main(si_cond::String, sys::Int, noise_idx::Int)
         end
     end
 
-    outdir = datadir("sims", "ode_results_rev", "si_neffall", si_cond)
+    outdir = datadir("sims", "ode_results", "si_neffall", si_cond)
     mkpath(outdir)
     sysname_safe = lowercase(replace(sysname, " " => "_"))
     payload = Dict{String,Any}(

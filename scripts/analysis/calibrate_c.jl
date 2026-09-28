@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "SLIC"
 using JLD, Random, Statistics, LinearAlgebra, Combinatorics, Printf
 
-include(scriptsdir("rev", "rev_common.jl"))
+include(scriptsdir("analysis", "common.jl"))
 
 # ----------------------------------------------------------------------------
 # Note on the residual floor eta (applies identically to every criterion,
@@ -48,9 +48,9 @@ include(scriptsdir("rev", "rev_common.jl"))
 # Noise-free inputs are deterministic, so ONE run suffices (no noise
 # realisation to average over). The whole sweep runs in seconds to minutes.
 #
-# Usage (inside a salloc devel session):
-#     SLIC_CAL_SYS=1 julia --project=. scripts/rev/calibrate_c.jl
-#   or loop:  for s in 1 2 3 4 5 6; do SLIC_CAL_SYS=$s julia --project=. scripts/rev/calibrate_c.jl; done
+# Usage (one run per system, 1-6):
+#     SLIC_CAL_SYS=1 julia --project=. scripts/analysis/calibrate_c.jl
+#   or loop:  for s in 1 2 3 4 5 6; do SLIC_CAL_SYS=$s julia --project=. scripts/analysis/calibrate_c.jl; done
 # ============================================================================
 
 const ICS_CAL = ["slic", "aic", "aicc", "bic", "hqic", "bc", "kic"]
@@ -216,7 +216,7 @@ function main(sys::Int)
                 sys == 4 ? "1e-2" : sys == 5 ? "1e0" : "1e-2")
     end
 
-    outdir = datadir("sims", "ode_results_rev", "c_calibration")
+    outdir = datadir("sims", "ode_results", "c_calibration")
     mkpath(outdir)
     wsave(joinpath(outdir, "$(lowercase(replace(sysname, " " => "_")))_ccal.jld"),
           Dict{String,Any}("sys"=>sys, "sysname"=>sysname, "c_grid"=>collect(C_GRID),

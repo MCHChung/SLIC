@@ -1,7 +1,7 @@
 using LinearAlgebra, Combinatorics
 
 # ============================================================================
-# Exhaustive enumeration over all sparsity patterns (R2 §5).
+# Exhaustive enumeration over all sparsity patterns.
 #
 # For libraries small enough that 2^p is tractable (VdP: 2^9=512,
 # Pendulum: 2^10=1024, Lorenz per-eq: 2^19≈5e5), enumerate every support,
@@ -9,7 +9,7 @@ using LinearAlgebra, Combinatorics
 # the best model.
 #
 # This isolates the criterion from the candidate-generation procedure
-# (Algorithm 1's threshold sweep), addressing R2's loop-confound critique.
+# (Algorithm 1's threshold sweep), removing any confound from that loop.
 # ============================================================================
 
 """

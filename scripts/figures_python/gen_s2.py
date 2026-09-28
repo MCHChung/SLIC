@@ -96,8 +96,8 @@ def build(ROWS, outfile, figw=41, rowh=5.6):
     plt.close(fig)
     print("wrote",outfile.split('/')[-1])
 
-# MAIN: exactly the metrics R2 asked for
-# SI: the additional metrics R2 named but did not request
+# MAIN: the headline metrics
+# SI: the additional metrics
 build([('a','f1','F1 score',False),
        ('b','bacc','Balanced\naccuracy',False),
        ('c','prec','Precision',False)],

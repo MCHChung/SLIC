@@ -1,16 +1,16 @@
 using LinearAlgebra , StatsBase
 
 # ============================================================================
-# MODIFIED for revision. Adds:
-#   - n_eff support in penalty terms (R2 §3)
+# Sparse regression and model scoring. Includes:
+#   - n_eff support in penalty terms
 #   - fit_uses_neff flag selecting Position 1 (coherent n_eff everywhere) vs
-#     Position 2 (legacy: raw n in fit, n_eff in penalty). Default Position 1.
-#   - WAIC / NML hooks (corrected versions live in waic_gmdl.jl; the names
+#     Position 2 (raw n in fit, n_eff in penalty). Default Position 1.
+#   - WAIC / NML hooks (implementations live in waic_gmdl.jl; the names
 #     "waic"/"nml" here route to whatever is included).
 #
 # SLIC's selection is invariant to n vs n_eff in both fit and penalty (its
 # leading coefficient is a positive multiplier that cancels in argmin, and the
-# inside-log term shifts by a common additive constant). SLIC left unchanged.
+# inside-log term shifts by a common additive constant).
 # ============================================================================
 
 function AdSR(θ, y, ic::String; iter=10, c=0., trainpct=80, abstol=1e-7, reltol=1e-7,
@@ -193,8 +193,7 @@ function score(y, θ, Ξ, ic, η; n_eff=nothing, fit_uses_neff::Bool=true)
 end
 
 # WAIC/NML implementations are provided by a separate file when those criteria
-# are needed (waic_gmdl.jl for the corrected versions, or the legacy
-# waic_nml.jl). The n_eff reruns in this revision do NOT use the waic/nml
-# branches, so we do not include either here by default — the classical
+# are needed (waic_gmdl.jl). The n_eff benchmarks do NOT use the waic/nml
+# branches, so we do not include it here by default — the classical
 # criteria and SLIC are fully self-contained above. Scripts that need
-# waic/gmdl include their implementation explicitly (see rerun_with_waic_gmdl.jl).
+# waic/gmdl include their implementation explicitly (see waic_gmdl_benchmarks.jl).

@@ -1,9 +1,9 @@
 using LinearAlgebra
 
 # ============================================================================
-# No-projection diagnostic pipeline (R2 §3 complementary experiment).
+# No-projection diagnostic pipeline.
 #
-# REVISION (v2): switched from 2nd-order centered FD to:
+# Derivatives are computed with:
 #   - `CalcDeriv` from derivative.jl (4th-order centered) for first derivatives
 #   - A 4th-order central stencil for second derivatives, rather than
 #     cascading two first derivatives (which compounds truncation error
@@ -61,13 +61,13 @@ function GetInputsNoProj(sys::Int, Xs, ts, Lib::Function, NoisePct;
 
     elseif sys == 5  # Van der Pol
         if assume_velocity_known
-            return _vdp_with_known_velocity_v2(Xs, ts, dt, NoisePct, subsample)
+            return _vdp_with_known_velocity(Xs, ts, dt, NoisePct, subsample)
         else
-            return _vdp_estimate_velocity_v2(Xs, ts, dt, NoisePct, subsample)
+            return _vdp_estimate_velocity(Xs, ts, dt, NoisePct, subsample)
         end
 
     elseif sys == 6  # Nonlinear pendulum: directly compute d²x/dt² with 4th-order stencil
-        return _pendulum_no_proj_v2(Xs, ts, dt, NoisePct, subsample)
+        return _pendulum_no_proj(Xs, ts, dt, NoisePct, subsample)
     end
 end
 
@@ -105,7 +105,7 @@ end
 # ============================================================================
 
 # estimate_v: only x observed; v and a both estimated from CalcDeriv
-function _vdp_estimate_velocity_v2(Xs, ts, dt, NoisePct, subsample)
+function _vdp_estimate_velocity(Xs, ts, dt, NoisePct, subsample)
     qt_full = nothing; θ_full = nothing
     for j = 1:length(Xs)
         xtrue = Xs[j][1, :]
@@ -137,7 +137,7 @@ function _vdp_estimate_velocity_v2(Xs, ts, dt, NoisePct, subsample)
 end
 
 # known_v: both x and v observed (noised independently); a from CalcDeriv on v
-function _vdp_with_known_velocity_v2(Xs, ts, dt, NoisePct, subsample)
+function _vdp_with_known_velocity(Xs, ts, dt, NoisePct, subsample)
     qt_full = nothing; θ_full = nothing
     for j = 1:length(Xs)
         X = Xs[j]
@@ -172,7 +172,7 @@ end
 # Pendulum (sys=6) — 4th-order second-derivative stencil directly
 # ============================================================================
 
-function _pendulum_no_proj_v2(Xs, ts, dt, NoisePct, subsample)
+function _pendulum_no_proj(Xs, ts, dt, NoisePct, subsample)
     qt_full = nothing; θ_full = nothing
     for j = 1:length(Xs)
         xtrue = Xs[j][1, :]
@@ -196,7 +196,7 @@ function _pendulum_no_proj_v2(Xs, ts, dt, NoisePct, subsample)
 end
 
 # ============================================================================
-# Library builders: pointwise versions (unchanged from v1)
+# Library builders: pointwise versions
 # ============================================================================
 
 function _build_library_pointwise(sys::Int, X)

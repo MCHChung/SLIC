@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "SLIC"
 using JLD, Random, Statistics
 
-include(scriptsdir("rev", "rev_common.jl"))
+include(scriptsdir("analysis", "common.jl"))
 
 # ----------------------------------------------------------------------------
 # Note on the residual floor eta (applies identically to every criterion,
@@ -17,11 +17,11 @@ include(scriptsdir("rev", "rev_common.jl"))
 # not sparsify at low noise.
 # ----------------------------------------------------------------------------
 
-include(scriptsdir("rev", "sparse_regress_probe.jl"))  # score_on_all override
+include(scriptsdir("analysis", "sparse_regress_probe.jl"))  # score_on_all override
 include(srcdir("no_projection.jl"))
 
 # ============================================================================
-# No-projection diagnostic across ALL systems (R2 §3 complementary).
+# No-projection diagnostic across ALL systems.
 #
 # Replaces the weak-form Galerkin derivative with pointwise finite differences
 # (CalcDeriv, 4th-order) so n_eff = n trivially (iid setting). Tests whether
@@ -41,8 +41,7 @@ include(srcdir("no_projection.jl"))
 
 # Noise grid matches the main benchmark for cross-experiment consistency.
 # (With single differentiation on full-state observation, the pipeline handles
-# the higher noise levels; the low-noise resolution needed for the dropped
-# double-differentiation case is no longer required.)
+# the higher noise levels.)
 const NOISE_LEVELS_NP = [0, 5, 10, 20, 30, 40]
 const RUNS_NP = 25
 const NUM_BATCHES_NP = 20
@@ -113,7 +112,7 @@ function main(sys::Int)
         results[NoisePct] = per_cond
     end
 
-    outdir = datadir("sims", "ode_results_rev", "no_projection_scoreall_sub$(SUBSAMPLE_NP)")
+    outdir = datadir("sims", "ode_results", "no_projection_scoreall_sub$(SUBSAMPLE_NP)")
     mkpath(outdir)
     outfile = joinpath(outdir, "$(lowercase(replace(sysname, " " => "_")))_noproj_results.jld")
 
@@ -134,7 +133,7 @@ sys = if haskey(ENV, "SLURM_ARRAY_TASK_ID")
 elseif length(ARGS) >= 1
     parse(Int, ARGS[1])
 else
-    error("Usage: julia no_projection_diagnostic.jl SYS  (or SLURM_ARRAY_TASK_ID ∈ [0,5])")
+    error("Usage: julia no_projection_benchmarks.jl SYS  (or SLURM_ARRAY_TASK_ID ∈ [0,5])")
 end
 
 main(sys)

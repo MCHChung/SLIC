@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "SLIC"
 using JLD, Random, Statistics, LinearAlgebra
 
-include(scriptsdir("rev", "rev_common.jl"))
+include(scriptsdir("analysis", "common.jl"))
 
 # ----------------------------------------------------------------------------
 # Note on the residual floor eta (applies identically to every criterion,
@@ -17,15 +17,14 @@ include(scriptsdir("rev", "rev_common.jl"))
 # not sparsify at low noise.
 # ----------------------------------------------------------------------------
 
-include(scriptsdir("rev", "sparse_regress_probe.jl"))   # score_on_all override
+include(scriptsdir("analysis", "sparse_regress_probe.jl"))   # score_on_all override
 include(srcdir("neff.jl"))                              # the three n_eff definitions
 
 # ============================================================================
-# ROBUSTNESS OF THE CONCLUSIONS TO THE DEFINITION OF n_eff   (Reviewer 2, §3)
+# ROBUSTNESS OF THE CONCLUSIONS TO THE DEFINITION OF n_eff
 #
-# The response letter states that the recomputation was verified against the
-# more rigorous autocorrelation / projection-trace definitions. This probe
-# supplies that evidence.
+# Checks the n_eff results against the more rigorous autocorrelation /
+# projection-trace definitions (Supplementary Table S1).
 #
 # Three definitions are compared, all implemented in src/neff.jl:
 #
@@ -42,7 +41,7 @@ include(srcdir("neff.jl"))                              # the three n_eff defini
 #   (3) trace     n_eff = n_proj * (sum w^2)/(sum w)^2 from the kernel
 #       weights, the projection-operator trace under row normalisation.
 #
-# WHY THIS MATTERS BEYOND THE LETTER. Definition (1) does not saturate under
+# WHY THIS MATTERS. Definition (1) does not saturate under
 # oversampling: FindW selects the window in SAMPLES, so as dt shrinks the
 # window's physical width T_w = wind*dt shrinks with it and n_eff keeps
 # growing (empirically n_eff ~ n^0.86 across the dts sweep) where a
@@ -71,7 +70,7 @@ include(srcdir("neff.jl"))                              # the three n_eff defini
 # consistency check between definitions, all of which see identical data, so a
 # smaller ensemble does not affect the comparison.
 #
-#   sbatch --array=0-5 cluster/submit_probe_neff_definitions.sh
+# One task per case: SLURM_ARRAY_TASK_ID 0-5 (or the case number 1-6 as argument).
 # ============================================================================
 
 const RUNS_P  = 10
@@ -242,7 +241,7 @@ function main(case_idx::Int)
     println("\nREAD: SLIC's row must be identical across all three definitions (it is")
     println("invariant to n_eff by construction). If the competitors' rows are also")
     println("stable, the conclusions do not depend on which n_eff definition is used,")
-    println("which is what the response letter claims. If they move, report the")
+    println("i.e. the conclusions are robust to it. If they move, report the")
     println("headline under the definition and state the sensitivity.")
 end
 

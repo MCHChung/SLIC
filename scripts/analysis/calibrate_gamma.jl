@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "SLIC"
 using JLD, Random, Statistics, LinearAlgebra, Combinatorics, Printf
 
-include(scriptsdir("rev", "rev_common.jl"))
+include(scriptsdir("analysis", "common.jl"))
 
 # ============================================================================
 # Calibrate a DIMENSIONLESS conditioning floor.
@@ -24,8 +24,8 @@ include(scriptsdir("rev", "rev_common.jl"))
 # Reading: a criterion must not try to explain residual structure lying within
 # a factor γ of the derivative estimator's own approximation error.
 #
-# Usage (batch, one task per system):
-#     sbatch --array=0-5 cluster/submit_calibrate_gamma.sh
+# Usage (one run per system, 1-6):
+#     SLIC_CAL_SYS=1 julia --project=. scripts/analysis/calibrate_gamma.jl
 # ============================================================================
 
 const ICS_CAL = ["slic", "aic", "aicc", "bic", "hqic", "bc", "kic"]
@@ -150,7 +150,7 @@ function main(sys::Int)
                 first(g), last(g), sqrt(first(g) * last(g)))
     end
 
-    outdir = datadir("sims", "ode_results_rev", "gamma_calibration")
+    outdir = datadir("sims", "ode_results", "gamma_calibration")
     mkpath(outdir)
     wsave(joinpath(outdir, "$(lowercase(replace(sysname, " " => "_")))_gcal.jld"),
           Dict{String,Any}("sys"=>sys, "sysname"=>sysname,
