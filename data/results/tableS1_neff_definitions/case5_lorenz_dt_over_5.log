@@ -1,0 +1,17 @@
+------------------------------------------------
+  JULIA_NUM_THREADS=5
+julia version 1.10.4
+------------------------------------------------
+=== case 4 ===  Wed Aug  5 04:03:04 PM EDT 2026
+================================================================================
+n_eff DEFINITION ROBUSTNESS  case 5: Lorenz, finest sampling (dt/5): oversampling stress test
+================================================================================
+
+--- noise = 0% ---
+  n_proj = 149640, window = 121 samples
+  n_eff:  gaussian = 2211.7  autocorr = 2680.3  trace = 3321.4
+  n_proj/n_eff:  gaussian = 67.7x  autocorr = 55.8x  trace = 45.1x
+  definition  | slic              bic               kic               aic              
+  gaussian    | 1.0/0.0/7.0       1.0/0.0/7.0       1.0/0.0/7.0       1.0/0.0/7.0      
+  autocorr    | 1.0/0.0/7.0       1.0/0.0/7.0       1.0/0.0/7.0       1.0/0.0/7.0      
+  trace       | 1.0/0.0/7.0       1.0/0.0/7.0       1.0/0.0/7.0       1.0/0.0/7.0      

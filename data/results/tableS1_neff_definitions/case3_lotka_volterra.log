@@ -1,0 +1,45 @@
+------------------------------------------------
+  JULIA_NUM_THREADS=5
+julia version 1.10.4
+------------------------------------------------
+=== case 2 ===  Wed Aug  5 04:03:04 PM EDT 2026
+================================================================================
+n_eff DEFINITION ROBUSTNESS  case 3: Lotka-Volterra, standard sampling
+================================================================================
+
+--- noise = 0% ---
+  n_proj = 5898, window = 35 samples
+  n_eff:  gaussian = 305.8  autocorr = 397.7  trace = 462.0
+  n_proj/n_eff:  gaussian = 19.3x  autocorr = 14.8x  trace = 12.8x
+  definition  | slic              bic               kic               aic              
+  gaussian    | 1.0/0.0/4.0       1.0/0.0/4.0       1.0/0.0/4.0       1.0/0.0/4.0      
+  autocorr    | 1.0/0.0/4.0       1.0/0.0/4.0       1.0/0.0/4.0       1.0/0.0/4.0      
+  trace       | 1.0/0.0/4.0       1.0/0.0/4.0       1.0/0.0/4.0       1.0/0.0/4.0      
+  (each cell = recovery / FPR / n_selected)
+
+--- noise = 20% ---
+  n_proj = 5898, window = 35 samples
+  n_eff:  gaussian = 305.8  autocorr = 666.1  trace = 462.0
+  n_proj/n_eff:  gaussian = 19.3x  autocorr = 8.9x  trace = 12.8x
+  definition  | slic              bic               kic               aic              
+  gaussian    | 1.0/0.0/4.0       0.8/0.01/4.2      1.0/0.0/4.0       0.4/0.36/9.0     
+  autocorr    | 1.0/0.0/4.0       0.6/0.05/4.7      0.8/0.01/4.2      0.1/0.74/14.4    
+  trace       | 1.0/0.0/4.0       0.8/0.04/4.5      0.8/0.01/4.2      0.2/0.73/14.2    
+  (each cell = recovery / FPR / n_selected)
+
+--- noise = 40% ---
+  n_proj = 5898, window = 35 samples
+  n_eff:  gaussian = 305.8  autocorr = 529.4  trace = 462.0
+  n_proj/n_eff:  gaussian = 19.3x  autocorr = 11.1x  trace = 12.8x
+  definition  | slic              bic               kic               aic              
+  gaussian    | 0.7/0.04/4.5      0.6/0.06/4.8      0.7/0.04/4.5      0.1/0.61/12.6    
+  autocorr    | 0.8/0.03/4.4      0.6/0.06/4.8      0.6/0.04/4.6      0.1/0.79/15.1    
+  trace       | 0.7/0.04/4.5      0.6/0.06/4.8      0.6/0.04/4.6      0.1/0.75/14.5    
+  (each cell = recovery / FPR / n_selected)
+
+READ: SLIC's row must be identical across all three definitions (it is
+invariant to n_eff by construction). If the competitors' rows are also
+stable, the conclusions do not depend on which n_eff definition is used,
+which is what the response letter claims. If they move, report the
+headline under the definition and state the sensitivity.
+  done Wed Aug  5 04:04:28 PM EDT 2026

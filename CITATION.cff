@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software or data, please cite it as below."
+title: "SLIC: code and data for 'A sample-size-invariant scoring criterion for sparse model discovery'"
+authors:
+  - family-names: Chung
+    given-names: Michael C.
+  - family-names: Zacharia
+    given-names: Alen
+  - family-names: Guan
+    given-names: Juan
+version: 1.1.0
+doi: 10.5281/zenodo.23001594
+repository-code: "https://github.com/MCHChung/SLIC"

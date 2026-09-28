@@ -1,100 +1,76 @@
-using LinearAlgebra , StatsBase 
+using LinearAlgebra , StatsBase
 
-# INPUTS (for AdSR)
-# Θ: The library matrix with size n x p, where n is the data length, p is the number of nonlinear basis. 
-# y: Output, for dynamics will be estimated or measured derivative of dynamics.
-# iter: Number of regressions you would like to perform.
-# c : adds optional additional sparsity enforcement, essentially like injecting small amount of noise to system.  
+# ============================================================================
+# MODIFIED for revision. Adds:
+#   - n_eff support in penalty terms (R2 §3)
+#   - fit_uses_neff flag selecting Position 1 (coherent n_eff everywhere) vs
+#     Position 2 (legacy: raw n in fit, n_eff in penalty). Default Position 1.
+#   - WAIC / NML hooks (corrected versions live in waic_gmdl.jl; the names
+#     "waic"/"nml" here route to whatever is included).
+#
+# SLIC's selection is invariant to n vs n_eff in both fit and penalty (its
+# leading coefficient is a positive multiplier that cancels in argmin, and the
+# inside-log term shifts by a common additive constant). SLIC left unchanged.
+# ============================================================================
 
-# OUTPUTS (for AdSR)
-# Ξes = estimated model 
-# min_score = min IC score
+function AdSR(θ, y, ic::String; iter=10, c=0., trainpct=80, abstol=1e-7, reltol=1e-7,
+              n_eff=nothing, fit_uses_neff::Bool=true)
 
-function AdSR(θ, y, ic::String; iter = 10, c=0., trainpct=80, abstol=1e-7, reltol = 1e-7)
-    #@assert ic == "slic" || ic == "aicc" || ic == "bic"
-
-    # random train-val split 
-    nobs , n_state = size(y)
+    nobs, n_state = size(y)
     bag_size = Int(floor(trainpct*nobs/100))
     traininds = sort(sample(1:nobs, bag_size, replace=false))
     testinds = [i for i=1:nobs if i ∉ traininds]
     θ_train = θ[traininds, :] ; θ_test = θ[testinds, :]
     y_train = y[traininds, :] ; y_test = y[testinds, :]
 
-    # define information criterion scoring procedure 
-    η = c*cond(θ_train) # this is optional enforcement to prevent log(RSS) -> ∞ , SLIC does well without it!
-    #=
-    function score(Ξ, ic)
-        nobs_test = size(y_test,1) # number of observations in test/val 
-        k = count(abs.(Ξ) .> 0.) + 1 # number of free params
-        RSS = sum(abs2, y_test - θ_test*Ξ)
-        if ic=="slic"
-            nobs_test*log(k*(RSS + η)/nobs_test)
-        elseif ic=="aicc"
-            nobs_test*log((RSS + η)/nobs_test) + 2*k*nobs_test/(nobs_test-k-1)
-        elseif ic=="bic"
-            nobs_test*log((RSS + η)/nobs_test) + k*log(nobs_test)
-        else
-            throw("Please enter valid selection criterion => slic, aicc, bic")
-        end
-    end
-    =# 
-    # Initialize comparison values
+    η = c*cond(θ_train)
+
+    # n_eff scales to the test split (scoring happens on the held-out rows)
+    n_eff_test = isnothing(n_eff) ? nothing : n_eff * (100-trainpct) / 100
+
     min_score = Inf
     prev_smallinds = [1]
 
-    # Get an initial estimate of the selection matrix Ξes
-    Ξes = θ_train \ y_train    
-    X_prev = θ_train * Ξes 
-    #min_score = score(y_test, θ_test, Ξes, ic, η)
+    Ξes = θ_train \ y_train
+    X_prev = θ_train * Ξes
+
     for i=1:iter
-        
-        # auto-gen thresholds 
-        λmin = min(abs.(Ξes[Ξes .!= 0])...) 
-        λmax = max(abs.(Ξes[Ξes .!= 0])...)
-        λs = range(λmin, λmax, abs(1000*Int(ceil(log10(λmax/λmin)))))
-        
-        # sparsify and score effect 
+        nzv = Ξes[Ξes .!= 0]
+        isempty(nzv) && break
+        λmin = minimum(abs.(nzv))
+        λmax = maximum(abs.(nzv))
+        λs = range(λmin, λmax, abs(1000*Int(ceil(log10(λmax/λmin + 1e-12)))) + 2)
+
         for λ in λs
-            # Make a temporary Ξes matrix to test out the effect of λ
             temp_Ξes = copy(Ξes)
-            # Get the index of values whose absolute value is smaller than λ
             smallinds = (abs.(temp_Ξes).<λ)
 
-            # If the effect of λ is the same as the previous one, no need to do calculations again
             if smallinds == prev_smallinds
                 continue
             end
 
-            # Set the parameter value of library term whose absolute value is smaller than λ as zero
             temp_Ξes[smallinds].=0
             any(all(abs.(temp_Ξes) .== 0, dims=1)) ? break : nothing
-            # Regress the dynamics to the remaining terms
             for ind=1:n_state
                 biginds = .!smallinds[:,ind]
                 temp_Ξes[biginds,ind] = θ_train[:,biginds]\y_train[:,ind]
             end
-            
-            # Save the current small indices
+
             prev_smallinds = smallinds
 
-            # calculate the loss and compare it to our best loss
-            score_iter = score(y_test, θ_test, temp_Ξes, ic, η)
+            score_iter = score(y_test, θ_test, temp_Ξes, ic, η;
+                               n_eff=n_eff_test, fit_uses_neff=fit_uses_neff)
             if score_iter < min_score
                 Ξes = copy(temp_Ξes)
                 min_score = score_iter
             end
         end
-        
-        X = θ_train * Ξes # make new prediction
-        
-        # If nothing, or very little, changed in one iteration, then we have converged
+
+        X = θ_train * Ξes
         if _is_converged(X, X_prev, abstol, reltol)
             break
         end
-        
         X_prev = X
-         
     end
 
     return Ξes, min_score
@@ -108,82 +84,117 @@ function _is_converged(X, X_prev, abstol, reltol)::Bool
     return false
 end
 
-# This does AdSR with ensembling. The final output, ips, is the matrix of inclusion probabilities
 function EnAdSR(θ, y, ic::String;
         c = 0.,
         trainpct = 80,
         num_batches = 10,
         iter=10,
-        tol = 0.7
+        tol = 0.7,
+        n_eff = nothing,
+        fit_uses_neff::Bool = true,
     )
-    # hold ensemble of models  
-    #ΞB = zeros((size(θ\y)..., num_batches))
     ΞB = zeros((size(θ,2), size(y,2), num_batches))
-
-    scores = zeros(num_batches)
-    # determine number of sample size
+    scores_ = zeros(num_batches)
     N = size(y,1)
 
     for i=1:num_batches
-        # get model and score for this random train-val split 
-        Ξes , score = AdSR(θ, y, ic; iter=iter, c=c, trainpct=trainpct)
-        # add to holders 
+        Ξes, sc = AdSR(θ, y, ic; iter=iter, c=c, trainpct=trainpct,
+                       n_eff=n_eff, fit_uses_neff=fit_uses_neff)
         ΞB[:,:,i] = Ξes
-        scores[i] = score
+        scores_[i] = sc
     end
 
-    # compute the inclusion probabilities for model coefficients 
     biginds = abs.(ΞB).>0
-    ips = mean(biginds , dims=3)
+    ips = mean(biginds, dims=3)
 
-    # Compute the ensembled Ξs and probabilistically prune
-    Ξes = sum(ΞB, dims=3)./count(biginds,dims=3) 
-    Ξes[ips .< tol] .= 0 
+    Ξes = sum(ΞB, dims=3)./max.(count(biginds, dims=3), 1)
+    Ξes[ips .< tol] .= 0
     Ξes = Ξes[:,:,1]
 
-    # final regression to update
     n_state = size(y, 2)
     smallinds = .!(abs.(Ξes) .> 0)
     for ind=1:n_state
         biginds = .!smallinds[:,ind]
-        Ξes[biginds,ind] = θ[:,biginds]\y[:,ind]
+        any(biginds) && (Ξes[biginds,ind] = θ[:,biginds]\y[:,ind])
     end
 
-    return Ξes, scores, ips[:,:,1]
+    return Ξes, scores_, ips[:,:,1]
 end
 
-function score(y, θ, Ξ, ic, η)
-    n = size(y,1) # number of observations in test/val 
-    k = count(abs.(Ξ) .> 0.) + 1 # number of free params
+# ============================================================================
+# score() — Position-1 (coherent n_eff) by default. See header of
+# patch3/score_position1.jl for the full rationale.
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Note on the residual floor eta (applies identically to every criterion,
+# SLIC included). Candidates are scored on RSS + eta rather than RSS; see
+# score() in src/sparse_regress.jl. In the main pipeline eta = c*cond(theta),
+# with the per-system constant c passed to EnAdSR. In the exhaustive
+# enumeration (enumerate_all.jl) eta = gamma*RSS0, where RSS0 is the true
+# model's residual on noise-free data (calibrate_c.jl) and gamma = 100
+# (SLIC_GAMMA). The floor is numerical: as the noise goes to zero, RSS goes to
+# zero, which would otherwise make the log-likelihood terms diverge and leave
+# the fit term free to fall with every added term, so that most criteria would
+# not sparsify at low noise.
+# ----------------------------------------------------------------------------
+function score(y, θ, Ξ, ic, η; n_eff=nothing, fit_uses_neff::Bool=true)
+    n = size(y, 1)
+    n_pen = isnothing(n_eff) ? n : n_eff
+    n_fit = (isnothing(n_eff) || !fit_uses_neff) ? n : n_pen
+
+    k = count(abs.(Ξ) .> 0.) + 1
     RSS = sum(abs2, y - θ*Ξ) + η
-    if ic=="slic"
-        n*log(k*RSS/n)
-    elseif ic=="aic"
-        n*log(RSS/n) + 2*k
-    elseif ic=="aicc"
-        n*log(RSS/n) + 2*k*n/(n-k-1)
-    elseif ic=="bic"
-        n*log(RSS/n) + k*log(n)
-    elseif ic=="hqic"
-        n*log(RSS/n) + k*log(log(n))
-    elseif ic=="bc"
-        n*log(RSS/n) + n^(1/3) * sum(1/i for i=1:k)
-    elseif ic=="Cp"
-        RSS*(1+2*k/n)
-    elseif ic=="kic"
+
+    if ic == "slic"
+        return n*log(k*RSS/n)
+
+    elseif ic == "aic"
+        return n_fit*log(RSS/n) + 2*k
+
+    elseif ic == "aicc"
+        return n_fit*log(RSS/n) + 2*k*n_pen/(n_pen-k-1)
+
+    elseif ic == "bic"
+        return n_fit*log(RSS/n) + k*log(n_pen)
+
+    elseif ic == "hqic"
+        return n_fit*log(RSS/n) + k*log(log(n_pen))
+
+    elseif ic == "bc"
+        return n_fit*log(RSS/n) + n_pen^(1/3) * sum(1/i for i=1:k)
+
+    elseif ic == "Cp"
+        return RSS*(1+2*k/n_pen)
+
+    elseif ic == "kic"
         kic = 0
         biginds = abs.(Ξ) .> 0
         if size(y,2) > 1
             for ind=1:size(y,2)
                 biginds_i = biginds[:,ind]
-                kic +=  log(abs(det((RSS/n)^-1 * θ[:,biginds_i]'*θ[:,biginds_i])))
+                kic += log(abs(det((RSS/n)^-1 * θ[:,biginds_i]'*θ[:,biginds_i])))
             end
         else
-            kic +=   log(abs(det((RSS/n)^-1 * θ[:,vec(biginds)]'*θ[:,vec(biginds)])))
+            kic += log(abs(det((RSS/n)^-1 * θ[:,vec(biginds)]'*θ[:,vec(biginds)])))
         end
-        kic += n*log(RSS/n) - k*log(2*π) 
-        return kic 
+        kic += n_fit*log(RSS/n) - k*log(2*π)
+        return kic
+
+    elseif ic == "waic"
+        return waic_score(y, θ, Ξ, RSS, n; n_eff=n_pen)
+
+    elseif ic == "nml"
+        return nml_score(y, θ, Ξ, RSS, n, k; n_eff=n_pen)
+
     else
-        throw("Please enter valid selection criterion => slic, aic, aicc, bic, hqic, bc, Cp, kic")
+        throw("Invalid IC. Valid: slic, aic, aicc, bic, hqic, bc, Cp, kic, waic, nml")
     end
 end
+
+# WAIC/NML implementations are provided by a separate file when those criteria
+# are needed (waic_gmdl.jl for the corrected versions, or the legacy
+# waic_nml.jl). The n_eff reruns in this revision do NOT use the waic/nml
+# branches, so we do not include either here by default — the classical
+# criteria and SLIC are fully self-contained above. Scripts that need
+# waic/gmdl include their implementation explicitly (see rerun_with_waic_gmdl.jl).

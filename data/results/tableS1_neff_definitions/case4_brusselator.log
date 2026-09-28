@@ -1,0 +1,45 @@
+------------------------------------------------
+  JULIA_NUM_THREADS=5
+julia version 1.10.4
+------------------------------------------------
+=== case 3 ===  Wed Aug  5 04:03:04 PM EDT 2026
+================================================================================
+n_eff DEFINITION ROBUSTNESS  case 4: Brusselator, standard sampling
+================================================================================
+
+--- noise = 0% ---
+  n_proj = 29640, window = 121 samples
+  n_eff:  gaussian = 442.3  autocorr = 846.3  trace = 657.9
+  n_proj/n_eff:  gaussian = 67.0x  autocorr = 35.0x  trace = 45.1x
+  definition  | slic              bic               kic               aic              
+  gaussian    | 1.0/0.0/5.0       1.0/0.0/5.0       1.0/0.0/5.0       1.0/0.0/5.0      
+  autocorr    | 1.0/0.0/5.0       1.0/0.0/5.0       1.0/0.0/5.0       1.0/0.0/5.0      
+  trace       | 1.0/0.0/5.0       1.0/0.0/5.0       1.0/0.0/5.0       1.0/0.0/5.0      
+  (each cell = recovery / FPR / n_selected)
+
+--- noise = 20% ---
+  n_proj = 29640, window = 121 samples
+  n_eff:  gaussian = 442.3  autocorr = 981.6  trace = 657.9
+  n_proj/n_eff:  gaussian = 67.0x  autocorr = 30.2x  trace = 45.1x
+  definition  | slic              bic               kic               aic              
+  gaussian    | 1.0/0.0/5.0       0.6/0.07/6.0      0.9/0.01/5.1      0.0/0.28/9.2     
+  autocorr    | 1.0/0.0/5.0       0.3/0.14/7.1      0.5/0.09/6.4      0.0/0.59/13.8    
+  trace       | 1.0/0.0/5.0       0.5/0.09/6.4      0.6/0.07/6.0      0.0/0.48/12.2    
+  (each cell = recovery / FPR / n_selected)
+
+--- noise = 40% ---
+  n_proj = 29640, window = 121 samples
+  n_eff:  gaussian = 442.3  autocorr = 789.7  trace = 657.9
+  n_proj/n_eff:  gaussian = 67.0x  autocorr = 37.5x  trace = 45.1x
+  definition  | slic              bic               kic               aic              
+  gaussian    | 1.0/0.0/5.0       0.3/0.18/7.7      0.6/0.07/6.1      0.0/0.49/12.3    
+  autocorr    | 1.0/0.0/5.0       0.0/0.29/9.4      0.2/0.17/7.5      0.0/0.55/13.2    
+  trace       | 1.0/0.0/5.0       0.0/0.29/9.3      0.2/0.21/8.2      0.0/0.57/13.5    
+  (each cell = recovery / FPR / n_selected)
+
+READ: SLIC's row must be identical across all three definitions (it is
+invariant to n_eff by construction). If the competitors' rows are also
+stable, the conclusions do not depend on which n_eff definition is used,
+which is what the response letter claims. If they move, report the
+headline under the definition and state the sensitivity.
+  done Wed Aug  5 04:17:54 PM EDT 2026

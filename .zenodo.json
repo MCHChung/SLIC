@@ -1,0 +1,11 @@
+{
+  "title": "SLIC: code and data for 'A sample-size-invariant scoring criterion for sparse model discovery'",
+  "upload_type": "software",
+  "description": "Code and data for the sample-length-scaling information-like criterion (SLIC) for sparse model discovery of dynamical systems, including the analyses, results and figure scripts for the revised manuscript.",
+  "creators": [
+    {"name": "Chung, Michael C."},
+    {"name": "Zacharia, Alen"},
+    {"name": "Guan, Juan"}
+  ],
+  "keywords": ["model selection", "sparse regression", "system identification", "dynamical systems", "SINDy"]
+}

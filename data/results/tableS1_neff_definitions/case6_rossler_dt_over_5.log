@@ -1,0 +1,17 @@
+------------------------------------------------
+  JULIA_NUM_THREADS=5
+julia version 1.10.4
+------------------------------------------------
+=== case 5 ===  Wed Aug  5 04:05:46 PM EDT 2026
+================================================================================
+n_eff DEFINITION ROBUSTNESS  case 6: Rossler, finest sampling (dt/5): oversampling stress test
+================================================================================
+
+--- noise = 0% ---
+  n_proj = 149640, window = 121 samples
+  n_eff:  gaussian = 2211.7  autocorr = 1745.1  trace = 3321.4
+  n_proj/n_eff:  gaussian = 67.7x  autocorr = 85.7x  trace = 45.1x
+  definition  | slic              bic               kic               aic              
+  gaussian    | 0.0/0.0/5.0       1.0/0.0/7.0       1.0/0.0/7.0       1.0/0.0/7.0      
+  autocorr    | 0.0/0.0/5.0       1.0/0.0/7.0       1.0/0.0/7.0       1.0/0.0/7.0      
+  trace       | 0.0/0.0/5.0       1.0/0.0/7.0       1.0/0.0/7.0       1.0/0.0/7.0      
